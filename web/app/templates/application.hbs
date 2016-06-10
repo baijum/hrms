@@ -1,6 +1,9 @@
 <h2 id="title">Welcome to Ember</h2>
 
+{{#link-to 'index'}}Home{{/link-to}} <br />
+
 {{#link-to 'employees.new'}}New Employee{{/link-to}}
+
 
 <div class="menu">
   {{#if session.isAuthenticated}}
