@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/codegangsta/negroni"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/urfave/negroni"
 )
 
 var (
@@ -53,6 +53,7 @@ func TokenAuth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnauthorized)
 }
 
+// Employee represent an employee
 type Employee struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
