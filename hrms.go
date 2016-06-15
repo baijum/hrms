@@ -58,23 +58,34 @@ type Employee struct {
 	Name string `json:"name"`
 }
 
+func keyFunc(*jwt.Token) (interface{}, error) {
+	return signingKey, nil
+}
+
 // AddEmployee add employee details to the database
 func AddEmployee(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var emp Employee
+	token, err := jwt.ParseFromRequest(r, keyFunc)
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.Decode(&emp)
+	fmt.Printf("Token: %#v\nError: %#v", token, err)
+	if token.Valid {
+		w.Header().Set("Content-Type", "application/json")
+		var emp Employee
 
-	empline := fmt.Sprintf("id:%s;name:%s\n", emp.ID, emp.Name)
+		decoder := json.NewDecoder(r.Body)
+		decoder.Decode(&emp)
 
-	out, _ := ioutil.ReadFile(empdata)
+		empline := fmt.Sprintf("id:%s;name:%s\n", emp.ID, emp.Name)
 
-	ioutil.WriteFile(empdata, []byte(string(out)+empline), 0644)
+		out, _ := ioutil.ReadFile(empdata)
 
-	log.Printf("%#v\n", emp)
+		ioutil.WriteFile(empdata, []byte(string(out)+empline), 0644)
 
-	w.Write([]byte("{}\n"))
+		log.Printf("%#v\n", emp)
+
+		w.Write([]byte("{}\n"))
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+	}
 }
 
 func main() {
