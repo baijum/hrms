@@ -65,25 +65,29 @@ func keyFunc(*jwt.Token) (interface{}, error) {
 
 // AddEmployee add employee details to the database
 func AddEmployee(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var emp Employee
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.Decode(&emp)
+
+	empline := fmt.Sprintf("id:%s;name:%s\n", emp.ID, emp.Name)
+
+	out, _ := ioutil.ReadFile(empdata)
+
+	ioutil.WriteFile(empdata, []byte(string(out)+empline), 0644)
+
+	log.Printf("%#v\n", emp)
+
+	w.Write([]byte("{}\n"))
+}
+
+func Authorize(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	token, err := jwt.ParseFromRequest(r, keyFunc)
 
 	fmt.Printf("Token: %#v\nError: %#v", token, err)
 	if token.Valid {
-		w.Header().Set("Content-Type", "application/json")
-		var emp Employee
-
-		decoder := json.NewDecoder(r.Body)
-		decoder.Decode(&emp)
-
-		empline := fmt.Sprintf("id:%s;name:%s\n", emp.ID, emp.Name)
-
-		out, _ := ioutil.ReadFile(empdata)
-
-		ioutil.WriteFile(empdata, []byte(string(out)+empline), 0644)
-
-		log.Printf("%#v\n", emp)
-
-		w.Write([]byte("{}\n"))
+		next(w, r)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
 	}
@@ -96,7 +100,8 @@ func main() {
 	r.HandleFunc("/api/employees", AddEmployee).Methods("POST")
 	n := negroni.New(negroni.NewRecovery(),
 		negroni.NewLogger(),
-		negroni.NewStatic(http.Dir(*web)))
+		negroni.NewStatic(http.Dir(*web)),
+		negroni.HandlerFunc(Authorize))
 	n.UseHandler(r)
 	n.Run(":7080")
 
