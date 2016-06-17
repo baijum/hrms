@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -115,7 +116,9 @@ func Authorize(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 }
 
 func randomSalt() string {
-	return "hasdhakhqah1376lkasas89"
+	b := make([]byte, 20)
+	rand.Read(b)
+	return string(b)
 }
 
 func createUser(credential string) {
