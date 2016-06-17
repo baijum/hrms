@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	jwtreq "github.com/dgrijalva/jwt-go/request"
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 	"golang.org/x/crypto/scrypt"
@@ -57,10 +58,11 @@ func TokenAuth(w http.ResponseWriter, r *http.Request) {
 	passwd := getPasswd(username)
 
 	if passwd == string(dk) {
-		token := jwt.New(jwt.GetSigningMethod("HS256"))
-		// FIXME: get the username from the request
-		token.Claims["sub"] = username
-		token.Claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+		claims := &jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),
+			Subject:   username,
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		// Sign and get the complete encoded token as a string
 		tokenString, _ := token.SignedString(signingKey)
 
@@ -107,7 +109,7 @@ func AddEmployee(w http.ResponseWriter, r *http.Request) {
 
 // Authorize is a middleware for authorization
 func Authorize(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	token, err := jwt.ParseFromRequest(r, keyFunc)
+	token, err := jwtreq.ParseFromRequest(r, jwtreq.AuthorizationHeaderExtractor, keyFunc)
 
 	fmt.Printf("Token: %#v\nError: %#v", token, err)
 	if token.Valid {
@@ -121,7 +123,7 @@ func createUser(credential string) {
 	textslice := strings.Split(credential, ":")
 	username, passwd := textslice[0], textslice[1]
 	dk, _ := scrypt.Key([]byte(passwd), salt, 16384, 8, 1, 32)
-	f, err := os.OpenFile(userdata, os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(userdata, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(err)
 	}
