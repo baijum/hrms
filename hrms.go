@@ -22,22 +22,21 @@ var (
 	web        = flag.String("web", "web/dist", "Web UI directory")
 	credential = flag.String("credential", "", "Credential with format: user:passwd")
 	signingKey = []byte("yu786lklgfso32921lkasaskdhladsyg6")
-	salt       = []byte("adshgaiughdiuhi67523lkj12auigdad")
 	empdata    = "/tmp/emp.db"
 	userdata   = "/tmp/users.db"
 )
 
-func getPasswd(username string) string {
+func getPasswdSalt(username string) (string, string) {
 	out, _ := ioutil.ReadFile(userdata)
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		text := strings.Split(line, ":")
-		user, passwd := text[0], text[1]
+		user, passwd, salt := text[0], text[1], text[2]
 		if username == user {
-			return passwd
+			return passwd, salt
 		}
 	}
-	return ""
+	return "", ""
 }
 
 // TokenAuth generate token for valid users
@@ -49,9 +48,9 @@ func TokenAuth(w http.ResponseWriter, r *http.Request) {
 	decoder.Decode(&pl)
 	username := pl["username"]
 	password := pl["password"]
-	dk, _ := scrypt.Key([]byte(password), salt, 16384, 8, 1, 32)
 
-	passwd := getPasswd(username)
+	passwd, salt := getPasswdSalt(username)
+	dk, _ := scrypt.Key([]byte(password), []byte(salt), 16384, 8, 1, 32)
 
 	if passwd == string(dk) {
 		claims := &jwt.StandardClaims{
@@ -115,10 +114,16 @@ func Authorize(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	}
 }
 
+func randomSalt() string {
+	return "hasdhakhqah1376lkasas89"
+}
+
 func createUser(credential string) {
 	textslice := strings.Split(credential, ":")
 	username, passwd := textslice[0], textslice[1]
-	dk, _ := scrypt.Key([]byte(passwd), salt, 16384, 8, 1, 32)
+
+	salt := randomSalt()
+	dk, _ := scrypt.Key([]byte(passwd), []byte(salt), 16384, 8, 1, 32)
 	f, err := os.OpenFile(userdata, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(err)
@@ -126,7 +131,7 @@ func createUser(credential string) {
 
 	defer f.Close()
 
-	if _, err = f.WriteString(username + ":" + string(dk) + "\n"); err != nil {
+	if _, err = f.WriteString(username + ":" + string(dk) + ":" + salt + "\n"); err != nil {
 		panic(err)
 	}
 
