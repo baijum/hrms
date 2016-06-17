@@ -25,10 +25,6 @@ var (
 	salt       = []byte("adshgaiughdiuhi67523lkj12auigdad")
 	empdata    = "/tmp/emp.db"
 	userdata   = "/tmp/users.db"
-	users      = map[string]string{
-		"mbaiju": "qwerty123",
-		"somkar": "asdfgh123",
-	}
 )
 
 func getPasswd(username string) string {
